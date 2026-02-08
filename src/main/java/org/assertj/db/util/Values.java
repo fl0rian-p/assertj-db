@@ -12,9 +12,14 @@
  */
 package org.assertj.db.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Array;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
@@ -121,7 +126,13 @@ public class Values {
       if (expected instanceof Array) {
         return areEqual(value, (Array) expected);
       }
-    } else {
+    } else if (valueType == ValueType.LOB) {
+      if (expected instanceof Blob) {
+        return areEqual(value, (Blob) expected);
+      } else if (expected instanceof Clob) {
+        return areEqual(value, (Clob) expected);
+      }
+    }else {
       Object object = value.getValue();
       if (expected == null && object == null) {
         return true;
@@ -1219,5 +1230,60 @@ public class Values {
       } catch (SQLException e) {
         throw new AssertJDBException(e);
       }
+  }
+
+  /**
+   * Returns if the value's underlying Blob equals the expected's underlying Blob
+   * The equality check is done using reading the both streams
+   *
+   * @param value    The value.
+   * @param expected The {@code Blob} to compare.
+   * @return {@code true} if the value's underlying blob equals the {@code Blob}'s underlying blob, {@code false} otherwise.
+   */
+  private static boolean areEqual(Value value, Blob expected) { 
+    try {
+      Blob actual = (Blob) value.getValue();
+      if (expected == null) {
+        return actual == null;
+      }
+      return actual != null &&
+        expected.length() == actual.length() &&
+        areEqual(expected.getBinaryStream(), actual.getBinaryStream());
+    } catch (Exception e) {
+      throw new AssertJDBException(e);
+    }
+  }
+
+  /**
+   * Returns if the value's underlying Clob equals the expected's underlying Clob
+   * The equality check is done using reading the both streams
+   *
+   * @param value    The value.
+   * @param expected The {@code Clob} to compare.
+   * @return {@code true} if the value's underlying clob equals the {@code Clob}'s underlying clob, {@code false} otherwise.
+   */
+  private static boolean areEqual(Value value, Clob expected) {
+    try {
+      Clob actual = (Clob) value.getValue();
+      if (expected == null) {
+        return actual == null;
+      }
+      return actual != null &&
+        expected.length() == actual.length() &&
+        areEqual(expected.getAsciiStream(), actual.getAsciiStream());
+    } catch (Exception e) {
+      throw new AssertJDBException(e);
+    }
+  }
+
+  private static boolean areEqual(InputStream is1, InputStream is2) throws IOException {
+      Integer currentByte = null;
+      do {
+        currentByte = is1.read();
+        if (currentByte != is2.read()) {
+          return false;
+        }
+      } while (currentByte > -1);
+      return true;
   }
 }

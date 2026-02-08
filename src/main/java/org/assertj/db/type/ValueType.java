@@ -57,6 +57,10 @@ public enum ValueType {
    */
   ARRAY,
   /**
+   * LOB type 
+   */
+  LOB,
+  /**
    * Not identified type : null value for example.
    */
   NOT_IDENTIFIED;
@@ -95,6 +99,9 @@ public enum ValueType {
     }
     if (expected instanceof java.sql.Array) {
       return new ValueType[]{ARRAY};
+    }
+    if (expected instanceof java.sql.Blob || expected instanceof java.sql.Clob) {
+      return new ValueType[]{LOB};
     }
     return new ValueType[]{NOT_IDENTIFIED};
   }
